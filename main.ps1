@@ -1,9 +1,6 @@
 $daysExpiredThreshold = 7
 
-function Get-TableRow ($daysExpiredThreshold) {
-    param (
-        [pscustomobject]$Object
-    )
+function Get-TableRow ($object, $daysExpiredThreshold) {
 
     $statusClass = if ($Object.'Days To Expire' -le $daysExpiredThreshold ) { "Expiring" } else { "OK" }
     
@@ -29,7 +26,7 @@ foreach ($cert in $issuedCerts) {
         'Effective Date'  = $cert.'Certificate Effective Date';
         'Expiration Date' = $date;
         'Template'        = $($name.Split(' ')[1..10] -join " ");
-        'Days To Expire'  = ((get-date $date.split(' ')[0]) - (get-date)).days
+        'Days To Expire'  = try {((get-date $date.split(' ')[0] -ErrorAction Stop) - (get-date)).days} catch {write-host "Error on date: $($error[0].exception.message)"}
     }
     if ($certDetails.'Days To Expire' -lt 0) {
         write-host "Ignoring as certificate has already expired"
@@ -41,7 +38,7 @@ foreach ($cert in $issuedCerts) {
 
 $aboutToExpire = $certificateDetailsArray | ? {$_.'Days To Expire' -le $daysExpiredThreshold}
 
-$tableRows = $certificateDetailsArray | sort 'Days To Expire' | ForEach-Object { Get-TableRow -object $_ }
+$tableRows = $certificateDetailsArray | sort 'Days To Expire' | ForEach-Object { Get-TableRow -object $_ -daysExpiredThreshold $daysExpiredThreshold}
 
 $htmlTemplate = @"
 <!DOCTYPE html>
